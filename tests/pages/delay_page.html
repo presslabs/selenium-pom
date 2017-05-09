@@ -1,0 +1,45 @@
+<html>
+<head>
+  <title>This is a test</title>
+  <script>
+    function sleep(milliseconds) {
+      var start = new Date().getTime();
+      for (var i = 0; i < 1e7; i++) {
+        if ((new Date().getTime() - start) > milliseconds){
+          break;
+        }
+      }
+    }
+    function show_div2() {
+      var div2 = window.document.getElementById('div2');
+      div2.setAttribute("style", "");
+    }
+    function show_div2_delayed(delay) {
+      window.setTimeout(show_div2, delay);
+    }
+  </script>
+</head>
+<body>
+
+  <div id='div1'>
+    <span class='span-class'>
+      span1 text
+    </span>
+    <span class='span-class span2'>
+      span2 text
+    </span>
+    <textarea class='textarea-class'>spam!</textarea>
+  </div>
+
+  <div id='div2' style='display: none;'>
+    <span class='span-class'>
+      span1 text
+    </span>
+    <span class='span-class span2'>
+      span2 text
+    </span>
+    <textarea class='textarea-class'>ham!</textarea>
+  </div>
+
+</body>
+</html>

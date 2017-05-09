@@ -1,14 +1,23 @@
+from __future__ import print_function
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver import ActionChains
+
+import logging
 
 
 LOCATORS = {
-    'id': By.ID,
-    'xpath': By.XPATH,
-    'tag_name': By.TAG_NAME,
     'class_name': By.CLASS_NAME,
+    'css_selector': By.CSS_SELECTOR,
+    'id': By.ID,
+    'link_text': By.LINK_TEXT,
+    'name': By.NAME,
+    'partial_link_text': By.PARTIAL_LINK_TEXT,
+    'tag_name': By.TAG_NAME,
+    'xpath': By.XPATH,
 }
 
 
@@ -19,18 +28,39 @@ def get_locator(kwargs):
 
 
 class Element(object):
-    def __init__(self, page, timeout=None, **kwargs):
-        self.driver = page
-        self._locator = get_locator(kwargs)
-        self.timeout = page.timeout if timeout is None else timeout
+    def __init__(self, parent=None, timeout=None, **kwargs):
+        self.parent = parent
+        if len(kwargs) == 0 and parent is None:
+            self._locator = None  # will be copied from the prototype, see new
+        else:
+            self._locator = get_locator(kwargs)
+
+    def __get__(self, obj, objtype):
+        return self.new(parent=obj)
+
+    def new(self, parent):
+        assert self.parent is None
+        new_element = type(self)()
+        new_element.__dict__ = self.__dict__.copy()
+        new_element.parent = parent
+        return new_element
+
+    @property
+    def timeout(self):
+        return self.parent.timeout
 
     def wait_visible(self):
         """Wait for the element to be visible"""
-        pass
+        el =  WebDriverWait(self.parent, self.timeout).until(
+            EC.presence_of_element_located(self._locator))
+        el = WebDriverWait(self.parent, self.parent.timeout).until(
+            EC.visibility_of(el)
+        )
+        return el
 
     def wait_clickable(self):
         """Wait for the element to be clickable"""
-        return WebDriverWait(self.driver, self.timeout).until(
+        return WebDriverWait(self.parent, self.parent.timeout).until(
             EC.element_to_be_clickable(self._locator)
         )
 
@@ -46,18 +76,29 @@ class Element(object):
         el = self.wait_clickable()
         el.send_keys(keys)
 
+    @property
+    def text(self):
+        el = self.wait_visible()
+        return el.text
+
+    def hover(self):
+        el = self.wait_visible()
+        ActionChains(self.parent).move_to_element(el).perform()
+
     def __getattr__(self, attr_name):
-        return getattr(self.driver.find_element(*self._locator), attr_name)
+        if self.parent is None:
+            raise AttributeError(attr_name)
+        return getattr(self.parent.find_element(*self._locator), attr_name)
 
 
 class Page(object):
     def __init__(self, driver, timeout=2):
-        self.driver = driver
+        self.parent = driver
         self.timeout = timeout
 
     def goto(self):
-        self.driver.get(self.url)
+        self.parent.get(self.url)
 
     def __getattr__(self, attr_name):
         # print attr_name
-        return getattr(self.driver, attr_name)
+        return getattr(self.parent, attr_name)
