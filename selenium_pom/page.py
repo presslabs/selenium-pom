@@ -96,8 +96,8 @@ class Page(object):
         self.parent = driver
         self.timeout = timeout
 
-    def goto(self):
-        self.parent.get(self.url)
+    def goto(self, url_extra=""):
+        self.parent.get(self.url + url_extra)
 
     def __getattr__(self, attr_name):
         # print attr_name
