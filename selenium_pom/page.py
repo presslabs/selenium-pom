@@ -92,7 +92,7 @@ class Element(object):
 
 
 class Page(object):
-    def __init__(self, driver, timeout=2):
+    def __init__(self, driver, timeout=10):
         self.parent = driver
         self.timeout = timeout
 
