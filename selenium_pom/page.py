@@ -1,15 +1,13 @@
 from __future__ import print_function
 
 import os
+import importlib
 
-from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver import ActionChains
 from selenium.common.exceptions import TimeoutException
-
-import logging
 
 
 LOCATORS = {
@@ -30,6 +28,30 @@ def get_locator(kwargs):
     return (LOCATORS[by], expression)
 
 
+class LazyElement(object):
+    """Use this to for recursive structures
+
+    Usage examples:
+
+    replies = LazyElement('tests.pages.front.Comments', css_selector='ol')
+    # the class is in the same module you can just reference it by name
+    replies = LazyElement('Comments', css_selector='ol')
+    """
+    def __init__(self, klass_name, **kwargs):
+        self._kwargs = kwargs
+        self.klass_locator = klass_name
+
+    def __get__(self, obj, objtype):
+        if '.' in self.klass_locator:
+            module_name, klass_name = self.klass_locator.rsplit('.', 1)
+        else:
+            module_name = objtype.__module__
+            klass_name = self.klass_locator
+        module = importlib.import_module(module_name)
+        klass = getattr(module, klass_name)
+        return klass(**self._kwargs).new(parent=obj)
+
+
 class Element(object):
     def __init__(self, parent=None, timeout=None, **kwargs):
         self.parent = parent
@@ -44,7 +66,7 @@ class Element(object):
         return self.parent._repr_locator() + " / {!r}:{!r}".format(*self._locator)
 
     def __repr__(self):
-        return "{}".format(self._repr_locator())
+        return "<{} {}>".format(type(self).__name__, self._repr_locator())
 
     def __get__(self, obj, objtype):
         return self.new(parent=obj)
