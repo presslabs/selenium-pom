@@ -9,7 +9,7 @@ except(IOError, ImportError):
 tests_require = ["pytest"]
 setup(
     name='selenium-pom',
-    version='0.1.4',
+    version='0.1.5',
     description="Page Object Model for Selenium",
     author="Presslabs SRL",
     author_email="ping@presslabs.com",
@@ -22,7 +22,6 @@ setup(
     },
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
-        "Intended Audience :: Developers",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: MacOS :: MacOS X",
