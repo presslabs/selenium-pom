@@ -203,7 +203,7 @@ class Page(object):
             obj = getattr(obj, attr)
         return obj
 
-    def reload_until(self, attr_name):
+    def reload_until(self, attr_name, verifier=lambda x: True):
         try_count = 0
 
         while True:
@@ -212,7 +212,10 @@ class Page(object):
             try:
                 el = self._recursive_attr_get(attr_name)
                 el.wait_visible(timeout=timeout)
-                return
+
+                if callable(verifier):
+                    assert verifier(self, el) == True
+                    return
             except:
                 if try_count >= 10:
                     raise
