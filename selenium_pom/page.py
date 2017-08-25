@@ -1,14 +1,13 @@
 from __future__ import print_function
 
-import os
 import importlib
+import os
 
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from selenium.webdriver import ActionChains
-from selenium.common.exceptions import TimeoutException
-
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 LOCATORS = {
     'class_name': By.CLASS_NAME,
@@ -37,6 +36,7 @@ class LazyElement(object):
     # the class is in the same module you can just reference it by name
     replies = LazyElement('Comments', css_selector='ol')
     """
+
     def __init__(self, klass_name, **kwargs):
         self._kwargs = kwargs
         self.klass_locator = klass_name
@@ -53,7 +53,7 @@ class LazyElement(object):
 
 
 class Element(object):
-    def __init__(self, parent=None, timeout=None, **kwargs):
+    def __init__(self, parent=None, **kwargs):
         self.parent = parent
         if len(kwargs) == 0 and parent is None:
             self._locator = None  # will be copied from the prototype, see new
@@ -63,12 +63,13 @@ class Element(object):
             self.wait_visible()
 
     def _repr_locator(self):
-        return self.parent._repr_locator() + " / {!r}:{!r}".format(*self._locator)
+        return self.parent._repr_locator() + " / {!r}:{!r}".format(
+            *self._locator)
 
     def __repr__(self):
         return "<{} {}>".format(type(self).__name__, self._repr_locator())
 
-    def __get__(self, obj, objtype):
+    def __get__(self, obj, _):
         return self.new(parent=obj)
 
     def new(self, parent):
@@ -90,53 +91,34 @@ class Element(object):
     def timeout(self):
         return self.parent.timeout
 
-    def is_visible(self, driver):
-        if isinstance(self.parent, Element):
-            parent_el = self.parent.element
-        else:
-            parent_el = self.parent
-        el = self.element
-        if el is None:
-            return False
-        else:
-            return el
+    def is_visible(self):
+        return self.is_present() and self.element.is_displayed()
 
-    def is_present(self, driver):
-        if isinstance(self.parent, Element):
-            parent_el = self.parent.element
-        else:
-            parent_el = self.parent
-        el = self.element
-        if el is None:
+    def is_present(self):
+        try:
+            _ = self.element
+        except NoSuchElementException:
             return False
-        else:
-            return el
+        return True
 
     def wait_visible(self, timeout=None):
         """Wait for the element to be visible"""
         if timeout is None:
             timeout = self.timeout
+
         if isinstance(self.parent, Element):
             parent_el = self.parent.element
         else:
             parent_el = self.parent
-        try:
-            el = WebDriverWait(parent_el, timeout).until(
-                self.is_present)
-        except TimeoutException as expt:
-            raise TimeoutException("unable to locate %r" % self)
-        try:
-            el = WebDriverWait(self.driver, timeout).until(
-                self.is_visible)
-        except TimeoutException as expt:
-            raise TimeoutException("%r not visible" % self)
-        return el
+
+        return WebDriverWait(parent_el, timeout).until(
+            EC.visibility_of_element_located(self._locator))
 
     def wait_clickable(self, timeout=None):
         """Wait for the element to be clickable"""
         if timeout is None:
-            timeout = self.parent.timeout
-        return WebDriverWait(self.driver, self.timeout).until(
+            timeout = self.timeout
+        return WebDriverWait(self.driver, timeout).until(
             EC.element_to_be_clickable(self._locator)
         )
 
@@ -193,7 +175,6 @@ class Page(object):
         self.parent.get(self.url + url_extra)
 
     def __getattr__(self, attr_name):
-        # print attr_name
         return getattr(self.parent, attr_name)
 
     def _recursive_attr_get(self, attr_name):
@@ -203,22 +184,26 @@ class Page(object):
             obj = getattr(obj, attr)
         return obj
 
-    def reload_until(self, attr_name, verifier=lambda x: True):
-        try_count = 0
+    def reload_until(self, attr_name, verifier=None):
+        def default_verifier(page, element):
+            timeout = page.timeout / 5.0
+            element.wait_visible(timeout=timeout)
+            return True
 
+        if not callable(verifier):
+            verifier = default_verifier
+
+        try_count = 0
         while True:
-            try_count += 1
-            timeout = self.timeout / 5.0
             try:
                 el = self._recursive_attr_get(attr_name)
-                el.wait_visible(timeout=timeout)
-
-                if callable(verifier):
-                    assert verifier(self, el) == True
-                    return
+                assert verifier(self, el) == True
             except:
                 if try_count >= 10:
                     raise
+
             if try_count >= 10:
                 assert False
+
+            try_count += 1
             self.goto()
