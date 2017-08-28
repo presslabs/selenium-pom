@@ -192,6 +192,7 @@ class Page(object):
                 el = self._recursive_attr_get(attr_name)
                 el.wait_visible(timeout=timeout)
                 assert verifier(self, el)
+                return el
             except:
                 if try_count >= 10:
                     raise
