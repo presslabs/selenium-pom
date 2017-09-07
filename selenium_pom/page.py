@@ -114,6 +114,19 @@ class Element(object):
         return WebDriverWait(parent_el, timeout).until(
             EC.visibility_of_element_located(self._locator))
 
+    def wait_invisible(self, timeout=None):
+        """Wait for the element to be invisible"""
+        if timeout is None:
+            timeout = self.timeout
+
+        if isinstance(self.parent, Element):
+            parent_el = self.parent.element
+        else:
+            parent_el = self.parent
+
+        return WebDriverWait(parent_el, timeout).until(
+            EC.invisibility_of_element_located(self._locator))
+
     def wait_clickable(self, timeout=None):
         """Wait for the element to be clickable"""
         if timeout is None:
@@ -184,14 +197,19 @@ class Page(object):
             obj = getattr(obj, attr)
         return obj
 
-    def reload_until(self, attr_name, verifier=lambda page, el: True):
+    def reload_until(self, attr_name, verifier=None):
+        def default_verifier(page, el, timeout):
+            return el.wait_visible(timeout)
+
+        if not callable(verifier):
+            verifier = default_verifier
+
         try_count = 0
         timeout = self.timeout / 5.0
         while True:
             try:
                 el = self._recursive_attr_get(attr_name)
-                el.wait_visible(timeout=timeout)
-                assert verifier(self, el)
+                assert verifier(self, el, timeout)
                 return el
             except:
                 if try_count >= 10:
