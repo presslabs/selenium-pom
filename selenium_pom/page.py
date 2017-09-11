@@ -101,6 +101,18 @@ class Element(object):
             return False
         return True
 
+    def wait_text(self, text, timeout=None):
+        if timeout is None:
+            timeout = self.timeout
+
+        if isinstance(self.parent, Element):
+            parent_el = self.parent.element
+        else:
+            parent_el = self.parent
+
+        return WebDriverWait(parent_el, timeout).until(
+            EC.text_to_be_present_in_element(self._locator, text))
+
     def wait_visible(self, timeout=None):
         """Wait for the element to be visible"""
         if timeout is None:
@@ -220,3 +232,4 @@ class Page(object):
 
             try_count += 1
             self.goto()
+
