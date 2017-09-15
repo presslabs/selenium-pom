@@ -219,6 +219,7 @@ class Page(object):
         try_count = 0
         timeout = self.timeout / 5.0
         while True:
+            self.goto()
             try:
                 el = self._recursive_attr_get(attr_name)
                 assert verifier(self, el, timeout)
@@ -231,5 +232,3 @@ class Page(object):
                 assert False
 
             try_count += 1
-            self.goto()
-
