@@ -75,7 +75,6 @@ class Element(object):
         new_element = type(self)()
         new_element.__dict__ = self.__dict__.copy()
         new_element.parent = parent
-        new_element.wait_visible()
         return new_element
 
     @property
