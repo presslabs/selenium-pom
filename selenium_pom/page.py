@@ -59,8 +59,6 @@ class Element(object):
             self._locator = None  # will be copied from the prototype, see new
         else:
             self._locator = get_locator(kwargs)
-        if parent is not None:
-            self.wait_visible()
 
     def _repr_locator(self):
         return self.parent._repr_locator() + " / {!r}:{!r}".format(
@@ -77,6 +75,7 @@ class Element(object):
         new_element = type(self)()
         new_element.__dict__ = self.__dict__.copy()
         new_element.parent = parent
+        new_element.wait_visible()
         return new_element
 
     @property
